@@ -1,0 +1,30 @@
+# Virtual environment
+venv/
+.venv/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Sample files (too large / sensitive)
+malware_samples/
+benign_samples/
+
+# Logs
+*.log
+
+# IDE
+.vscode/
+.idea/
+
+# Node modules
+node_modules/
+
+# EMBER dataset (too large)
+ember_data/
+*.dat
+*.tar.bz2
+
+# OS files
+.DS_Store

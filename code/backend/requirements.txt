@@ -1,0 +1,12 @@
+fastapi
+uvicorn
+xgboost
+scikit-learn==1.7.2
+pandas
+lief
+requests
+python-multipart
+joblib
+tqdm
+lightgbm
+git+https://github.com/elastic/ember.git
