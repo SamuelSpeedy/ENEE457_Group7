@@ -84,37 +84,37 @@ import joblib
 # ====== YOUR MODEL HOOKS ======
 def load_model():
     """
-    Load your trained malware detection model, scaler, and PCA.
+    Load your trained malware detection model and scaler.
+    Improved model (v2): No PCA, full 2381 features, 97.5% EMBER accuracy.
     This runs once when the server starts.
     """
     current_dir = Path(os.path.dirname(__file__))
     project_root = current_dir.parent.parent  # Go up to ENEE457_Group7 root
     results_dir = project_root / "models"
-    
-    model_path = results_dir / "xgboost_pca_model.pkl"
-    scaler_path = results_dir / "scaler.pkl"
-    pca_path = results_dir / "pca_transform.pkl"
 
-    if not (model_path.exists() and scaler_path.exists() and pca_path.exists()):
+    model_path = results_dir / "model_improved.pkl"
+    scaler_path = results_dir / "scaler_improved.pkl"
+
+    if not (model_path.exists() and scaler_path.exists()):
         print(f"Warning: Model files not found in {results_dir}")
-        return None, None, None
+        return None, None
 
     try:
         model = joblib.load(model_path)
         scaler = joblib.load(scaler_path)
-        pca = joblib.load(pca_path)
-            
-        print(f"Model pipeline loaded from {results_dir}")
-        return model, scaler, pca
-    except Exception as e:
-        print(f"Error loading model pipeline: {e}")
-        return None, None, None
 
-model, scaler, pca = load_model()
+        print(f"Improved model loaded from {results_dir} (no PCA, 2381 features)")
+        return model, scaler
+    except Exception as e:
+        print(f"Error loading model: {e}")
+        return None, None
+
+model, scaler = load_model()
 
 def predict_file(file_bytes: bytes):
     """
     Given file bytes, extract features and run model.predict / predict_proba.
+    Improved model: No PCA, uses all 2381 EMBER features directly.
 
     Return:
       (label: str, confidence: float)
@@ -126,31 +126,26 @@ def predict_file(file_bytes: bytes):
         # Extract features using EMBER
         extractor = ember.PEFeatureExtractor(2)
         features = np.array(extractor.feature_vector(file_bytes), dtype=np.float32)
-        
+
         # Reshape for sklearn-like pipeline (1 sample, N features)
         features = features.reshape(1, -1)
-        
-        # Apply Scaling
+
+        # Apply Scaling (no PCA in improved model)
         features_scaled = scaler.transform(features)
-        
-        # Apply PCA
-        features_pca = pca.transform(features_scaled)
-        
-        # Predict
-        # model.predict returns class labels, predict_proba returns probabilities
+
+        # Predict directly on scaled features
         if hasattr(model, "predict_proba"):
-            probs = model.predict_proba(features_pca)
-            malicious_prob = float(probs[0][1]) # Probability of class 1 (Malicious)
+            probs = model.predict_proba(features_scaled)
+            malicious_prob = float(probs[0][1])  # Probability of class 1 (Malicious)
         else:
-            # Fallback if predict_proba is not available
-            prediction = model.predict(features_pca)
+            prediction = model.predict(features_scaled)
             malicious_prob = float(prediction[0])
-        
-        # Threshold tuned for better recall (default 0.5 was too conservative)
+
+        # Threshold tuned for better recall
         THRESHOLD = 0.35
         label = "malicious" if malicious_prob > THRESHOLD else "benign"
         return label, malicious_prob
-        
+
     except Exception as e:
         print(f"Error during prediction: {e}")
         import traceback
